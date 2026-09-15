@@ -1,13 +1,13 @@
 <?php
 
+use App\Http\Controllers\Auth\AuthenticatedSessionController;
+use App\Http\Controllers\SchoolSetupController;
 use Illuminate\Support\Facades\Route;
 
-Route::middleware(['web','portal'])->group(function() {        
-    // Route::domain('auth'.env('APP_BASE_DOMAIN'))->group(function () {    
-        // Log::debug('home', [env('APP_BASE_DOMAIN')]);
-        Route::inertia('/', 'welcome')->name('dashboard');
-    // });    
-});
+Route::get('/setup', [SchoolSetupController::class, 'show'])->name('setup.show');
+Route::post('/setup', [SchoolSetupController::class, 'store'])->name('setup.store');
 
+Route::inertia('/', 'welcome')->name('dashboard');
 
-?>
+Route::post('/logout', [AuthenticatedSessionController::class, 'destroy'])
+    ->name('portal.logout');

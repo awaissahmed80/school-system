@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\TenantUser;
 use App\Models\User;
 
 return [
@@ -42,6 +43,39 @@ return [
             'driver' => 'session',
             'provider' => 'users',
         ],
+
+        /*
+         * Spatie role guards per school user type. Authentication remains on `web` / landlord users;
+         * these guards exist so tenant roles can be scoped by user type.
+         */
+        'platform_admin' => [
+            'driver' => 'session',
+            'provider' => 'users',
+        ],
+        'school_owner' => [
+            'driver' => 'session',
+            'provider' => 'users',
+        ],
+        'admin' => [
+            'driver' => 'session',
+            'provider' => 'tenant_users',
+        ],
+        'student' => [
+            'driver' => 'session',
+            'provider' => 'tenant_users',
+        ],
+        'teacher' => [
+            'driver' => 'session',
+            'provider' => 'tenant_users',
+        ],
+        'staff' => [
+            'driver' => 'session',
+            'provider' => 'tenant_users',
+        ],
+        'guardian' => [
+            'driver' => 'session',
+            'provider' => 'tenant_users',
+        ],
     ],
 
     /*
@@ -67,10 +101,10 @@ return [
             'model' => env('AUTH_MODEL', User::class),
         ],
 
-        // 'users' => [
-        //     'driver' => 'database',
-        //     'table' => 'users',
-        // ],
+        'tenant_users' => [
+            'driver' => 'eloquent',
+            'model' => TenantUser::class,
+        ],
     ],
 
     /*

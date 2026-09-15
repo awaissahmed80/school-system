@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 
+const APPEARANCE_COOKIE = 'appearance';
+
 const prefersDark = () => {
     if (typeof window === 'undefined') {
         return false;
@@ -11,9 +13,11 @@ const prefersDark = () => {
 const setCookie = (name, value, days = 365) => {
     if (typeof document === 'undefined') {
         return;
-    }    
-    const host = window.location.hostname.split('.').slice(-2).join('.');        
+    }
+
+    const host = window.location.hostname.split('.').slice(-2).join('.');
     const maxAge = days * 24 * 60 * 60;
+
     document.cookie = `${name}=${value};path=/;max-age=${maxAge};SameSite=Lax;domain=.${host}`;
 };
 
@@ -22,78 +26,76 @@ const getCookie = (name) => {
         return null;
     }
 
-    // Match the cookie name followed by '=' and capture the value
-    const nameEQ = name + "=";
-    const ca = document.cookie.split(';');
+    const nameEQ = `${name}=`;
+    const cookies = document.cookie.split(';');
 
-    for (let i = 0; i < ca.length; i++) {
-        let c = ca[i].trim(); // Remove leading spaces
-        if (c.indexOf(nameEQ) === 0) {
-            return c.substring(nameEQ.length, c.length);
+    for (let i = 0; i < cookies.length; i++) {
+        const cookie = cookies[i].trim();
+
+        if (cookie.indexOf(nameEQ) === 0) {
+            return cookie.substring(nameEQ.length);
         }
     }
-    
-    return null; // Return null if the cookie doesn't exist
+
+    return null;
 };
 
-const applyTheme = (appearance) => {
-    
-    const isDark = appearance === 'dark' || (appearance === 'system' && prefersDark());
+/**
+ * Resolved appearance preference.
+ * Missing cookie => system (used on auth before the user ever toggles theme after login).
+ */
+export const getStoredAppearance = () => {
+    const value = getCookie(APPEARANCE_COOKIE);
+
+    if (value === 'light' || value === 'dark' || value === 'system') {
+        return value;
+    }
+
+    return 'system';
+};
+
+export const applyTheme = (appearance) => {
+    if (typeof document === 'undefined') {
+        return;
+    }
+
+    const mode = appearance || 'system';
+    const isDark =
+        mode === 'dark' || (mode === 'system' && prefersDark());
 
     document.documentElement.classList.toggle('dark', isDark);
 };
 
-const mediaQuery = () => {
-    if (typeof window === 'undefined') {
-        return null;
-    }    
-    return window.matchMedia('(prefers-color-scheme: dark)');
+export const initializeTheme = () => {
+    applyTheme(getStoredAppearance());
 };
-
-const handleSystemThemeChange = () => {
-    console.log('Hello there')
-    const cookie_theme = getCookie('appearance');    
-    
-    // const currentAppearance = localStorage.getItem('appearance');
-    applyTheme(cookie_theme || 'system');
-};
-
-
-
 
 export function useAppearance() {
-    const [appearance, setAppearance] = useState(() => getCookie('appearance') || 'system');
+    const [appearance, setAppearance] = useState(getStoredAppearance);
 
     const updateAppearance = useCallback((mode) => {
         setAppearance(mode);
-        setCookie('appearance', mode);
+        setCookie(APPEARANCE_COOKIE, mode);
         applyTheme(mode);
     }, []);
 
-    // Apply theme on mount
     useEffect(() => {
         applyTheme(appearance);
-    }, []); // eslint-disable-line
+    }, [appearance]);
 
     useEffect(() => {
-        const mq = mediaQuery();
-        if (!mq) return;
+        const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
 
-        const handler = (e) => {
-            console.log('System theme changed. matches:', e.matches);
-            // Only react if user hasn't overridden
-            const current = getCookie('appearance') || 'system';
-            if (current === 'system') {
+        const onSystemThemeChange = () => {
+            if (getStoredAppearance() === 'system') {
                 applyTheme('system');
             }
         };
 
-        mq.addEventListener('change', handler);
-        console.log('Listener attached to', mq);
+        mediaQuery.addEventListener('change', onSystemThemeChange);
 
         return () => {
-            mq.removeEventListener('change', handler);
-            console.log('Listener removed');
+            mediaQuery.removeEventListener('change', onSystemThemeChange);
         };
     }, []);
 

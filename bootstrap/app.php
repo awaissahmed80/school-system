@@ -1,8 +1,10 @@
 <?php
 
-use App\Http\Middleware\HandleHomeRequests;
+use App\Http\Middleware\EnsureSchoolIsOnboarded;
 use App\Http\Middleware\HandleAuthRequests;
+use App\Http\Middleware\HandleHomeRequests;
 use App\Http\Middleware\HandlePortalRequests;
+use App\Http\Middleware\SetCurrentTenantFromSession;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -14,46 +16,41 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
-        web: __DIR__.'/../routes/web.php',        
+        web: __DIR__.'/../routes/web.php',
         commands: __DIR__.'/../routes/console.php',
         health: '/up',
-        then: function () {            
+        then: function () {
             Route::domain('auth.'.env('APP_BASE_DOMAIN', 'school-system.test'))
-                ->middleware('auth')
-                ->prefix('') // optional: keep /api prefix if desired
+                ->middleware(['web', 'auth_site'])
                 ->group(base_path('routes/auth.php'));
 
             Route::domain('portal.'.env('APP_BASE_DOMAIN', 'school-system.test'))
-                ->middleware('portal')
-                ->prefix('') // optional: keep /api prefix if desired
+                ->middleware(['web', 'auth', 'portal'])
                 ->group(base_path('routes/portal.php'));
         }
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->web(append: [
-        //     HandleHomeRequests::class,
-        //     HandleAuthRequests::class,
-        //     HandlePortalRequests::class,        
             AddLinkHeadersForPreloadedAssets::class,
         ]);
 
-        $middleware->group('public', [                   
-            // HandleAppearance::class,                        
-            HandleHomeRequests::class,            
-        ]);
-        
-        // $middleware->auth(append: [
-        //     HandleAuthRequests::class,              
-        // ]);
-        $middleware->group('auth', [                   
-            // HandleAppearance::class,                        
-            HandleAuthRequests::class,            
+        $middleware->group('public', [
+            HandleHomeRequests::class,
         ]);
 
-        $middleware->group('portal', [                   
-            // HandleAppearance::class,                        
-            HandlePortalRequests::class,            
+        $middleware->group('auth_site', [
+            HandleAuthRequests::class,
         ]);
+
+        $middleware->group('portal', [
+            SetCurrentTenantFromSession::class,
+            HandlePortalRequests::class,
+            EnsureSchoolIsOnboarded::class,
+        ]);
+
+        $middleware->redirectGuestsTo(function (Request $request) {
+            return $request->getScheme().'://auth.'.config('app.base_domain');
+        });
     })
     // ->withExceptions(function (Exceptions $exceptions): void {
     //     $exceptions->shouldRenderJsonWhen(
@@ -65,10 +62,10 @@ return Application::configure(basePath: dirname(__DIR__))
         $exceptions->render(function (NotFoundHttpException $e, Request $request) {
             if ($request->is('api/*')) {
                 return response()->json([
-                    'message' => 'Record not found.'
+                    'message' => 'Record not found.',
                 ], 404);
             }
-               
-            return Inertia::render('errors/not-found')->toResponse($request)->setStatusCode(404);                
-        });   
+
+            return Inertia::render('errors/not-found')->toResponse($request)->setStatusCode(404);
+        });
     })->create();

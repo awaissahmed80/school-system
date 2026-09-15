@@ -2,118 +2,160 @@
 
 namespace App\Console\Commands;
 
+use App\Actions\BootstrapTenantRbac;
+use App\Enums\UserStatus;
+use App\Enums\UserType;
+use App\Models\Tenant;
+use App\Models\TenantUser;
+use App\Models\User;
+use App\Support\SchoolPermissions;
 use Illuminate\Console\Attributes\Description;
 use Illuminate\Console\Attributes\Signature;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Config;
-use Illuminate\Support\Facades\Artisan;
-use Illuminate\Support\Facades\Schema;
-use App\Models\Tenant;
+use Illuminate\Support\Str;
+use Throwable;
 
-#[Signature('make:tenant 
-        {--name= : Tenant name}
-        {--database= : Database name}
-        {--identifier= : unique identifier}
-        {--admin_email=admin@example.com : Admin email}
-        {--admin_password=password : Admin password}')]
-#[Description('Create a new tenant with DB, user, and dummy data')]
+#[Signature('make:tenant
+    {name : Tenant / school name}
+    {identifier : Unique tenant identifier}
+    {database : Tenant database name}
+    {--admin_email= : School owner email}
+    {--admin_password= : School owner password}
+    {--admin_first_name=Admin : School owner first name}
+    {--admin_last_name=User : School owner last name}')]
+#[Description('Create a tenant record, database, run tenant migrations, and optionally create the school owner')]
 class MakeTenant extends Command
 {
     /**
      * Execute the console command.
      */
-    public function handle()
+    public function handle(): int
     {
-        //
-        $name = $this->option('name');
-        $dbName = $this->option('database');
-        $identifier = $this->option('identifier');
-        $email = $this->option('admin_email');
-        $password = $this->option('admin_password');
+        $name = (string) $this->argument('name');
+        $identifier = (string) $this->argument('identifier');
+        $dbName = (string) $this->argument('database');
+        $adminEmail = $this->option('admin_email');
+        $adminPassword = $this->option('admin_password');
 
-        if (!$name || !$dbName || !$subdomain) {
-            $this->error("❌ Missing required options: --name, --database, --identifier");
-            return 1;
+        if (! preg_match('/^[A-Za-z0-9_-]+$/', $identifier)) {
+            $this->error('Invalid identifier. Use only letters, numbers, underscores, and hyphens.');
+
+            return self::FAILURE;
         }
 
-        $this->info("🚧 Creating new tenant: $name ($identifier.$dbName)");
+        if (! preg_match('/^[A-Za-z0-9_]+$/', $dbName)) {
+            $this->error('Invalid database name. Use only letters, numbers, and underscores.');
 
-        // Step 1: Add tenant to landlord DB
-        $tenant = Tenant::create([
-            'name' => $name,
-            'database' => $dbName,
-            'identifier' => $identifier,
-        ]);
-
-        $tenant_user = $tenant->users()->create([
-            'display_name' => $name .' Admin',
-            'email_address' => $email,
-            'password' => bcrypt($password),
-            'tenant_id' => $tenant->id,
-            'status' => 'ACTIVE',
-        ]);
-
-        $this->info("✅ Tenant created in landlord DB");
-
-        // Step 2: Create tenant DB (MySQL only)
-        DB::statement("CREATE DATABASE IF NOT EXISTS `$dbName` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
-        $this->info("✅ Tenant database created: $dbName");
-
-        // Step 3: Configure tenant DB connection
-        Config::set('database.connections.tenant', [
-            'driver' => 'mysql',
-            'host' => env('DB_DEFAULT_HOST', '127.0.0.1'),
-            'port' => env('DB_DEFAULT_PORT', '3306'),
-            'database' => $dbName,
-            'username' => env('DB_DEFAULT_USERNAME'),
-            'password' => env('DB_DEFAULT_PASSWORD'),
-            'charset' => 'utf8mb4',
-            'collation' => 'utf8mb4_unicode_ci',
-        ]);
-
-        DB::purge('tenant');
-        DB::reconnect('tenant');
-
-        // Step 4: Run tenant migrations from custom path
-        $this->info("🚀 Running migrations...");
-
-        Artisan::call('migrate', [
-            '--database' => 'tenant',
-            '--path' => '/database/migrations/tenant',
-            '--force' => true,
-        ]);
-        $this->info(Artisan::output());
-        // Step 5: Create main tenant user
-
-        if (Schema::connection('tenant')->hasTable('tenant_users')) {
-            DB::connection('tenant')->table('tenant_users')->insert([
-                'first_name'    => $name,
-                'last_name'     => 'Admin',
-                'title'         => 'Administrator',
-                'super_admin'   => 1,
-                'tenant_id'     => $tenant_user->id,
-                'status'        => 'ACTIVE',
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
-            $this->info("✅ Main tenant user created: $email");
-        } else {
-            $this->error("❌ 'users' table not found. Make sure the migration was correct.");
+            return self::FAILURE;
         }
 
-        config(['seeder.tenant_id' => $tenant->id]);
-        // Step 6: Run dummy seeders (optional)
-        $this->info("🌱 Running dummy seeders...");
-        Artisan::call('db:seed', [
-            '--database' => 'tenant',
-            '--class' => 'TenantDataSeeder',
-            '--force' => true,
+        if (Tenant::query()->where('identifier', $identifier)->orWhere('database', $dbName)->exists()) {
+            $this->error('A tenant with this identifier or database name already exists.');
+
+            return self::FAILURE;
+        }
+
+        if (filled($adminEmail) xor filled($adminPassword)) {
+            $this->error('Provide both --admin_email and --admin_password, or neither.');
+
+            return self::FAILURE;
+        }
+
+        if (filled($adminEmail) && User::query()->where('email_address', $adminEmail)->exists()) {
+            $this->error("A user with email [{$adminEmail}] already exists.");
+
+            return self::FAILURE;
+        }
+
+        $this->info("Creating tenant: {$name} ({$identifier} → {$dbName})");
+
+        try {
+            $tenant = DB::connection('landlord')->transaction(function () use ($name, $identifier, $dbName, $adminEmail, $adminPassword) {
+                $tenant = Tenant::query()->create([
+                    'name' => $name,
+                    'identifier' => $identifier,
+                    'database' => $dbName,
+                    'status' => 'ACTIVE',
+                    'secret_key' => Str::random(64),
+                    'public_key' => Str::random(64),
+                    'api_key' => Str::random(64),
+                ]);
+
+                if (filled($adminEmail) && filled($adminPassword)) {
+                    User::query()->create([
+                        'first_name' => (string) $this->option('admin_first_name'),
+                        'last_name' => (string) $this->option('admin_last_name'),
+                        'email_address' => $adminEmail,
+                        'password' => $adminPassword,
+                        'user_type' => UserType::SchoolOwner,
+                        'tenant_id' => $tenant->id,
+                        'status' => UserStatus::Active,
+                        'email_verified_at' => now(),
+                    ]);
+                }
+
+                return $tenant;
+            });
+        } catch (Throwable $exception) {
+            $this->error("Failed to create landlord tenant record: {$exception->getMessage()}");
+
+            return self::FAILURE;
+        }
+
+        $this->info("Tenant record created (id: {$tenant->id}, code: {$tenant->code}).");
+
+        $migrateExitCode = $this->call('tenant:migrate', [
+            'db' => $dbName,
         ]);
-        $this->info(Artisan::output());
 
-        $this->info("🎉 Tenant setup complete!");
-        return 0;
+        if ($migrateExitCode !== self::SUCCESS) {
+            $this->error('Tenant database migration failed. Landlord tenant record was created; fix DB issues and re-run tenant:migrate.');
 
+            return self::FAILURE;
+        }
+
+        $tenant->makeCurrent();
+
+        try {
+            $ownerTenantUser = null;
+
+            if (filled($adminEmail)) {
+                $owner = User::query()->where('email_address', $adminEmail)->first();
+
+                if ($owner) {
+                    $ownerTenantUser = TenantUser::query()->create([
+                        'landlord_user_id' => $owner->id,
+                        'user_type' => UserType::SchoolOwner,
+                    ]);
+
+                    $this->info("School owner linked: {$adminEmail}");
+                }
+            }
+
+            $role = app(BootstrapTenantRbac::class)->handle($ownerTenantUser);
+            $permissionCount = count(SchoolPermissions::all());
+
+            $this->info("Role [{$role->name}] ready with {$permissionCount} permissions.");
+        } catch (Throwable $exception) {
+            Tenant::forgetCurrent();
+            $this->error("Failed to bootstrap tenant RBAC: {$exception->getMessage()}");
+
+            return self::FAILURE;
+        }
+
+        Tenant::forgetCurrent();
+
+        // Seeding deferred for now.
+        // $this->info('Running tenant seeders...');
+        // $this->call('db:seed', [
+        //     '--database' => 'tenant',
+        //     '--class' => 'TenantDataSeeder',
+        //     '--force' => true,
+        // ]);
+
+        $this->info('Tenant setup complete.');
+
+        return self::SUCCESS;
     }
 }

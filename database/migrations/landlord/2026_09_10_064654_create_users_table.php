@@ -15,13 +15,14 @@ return new class extends Migration
             $table->id();
             $table->string('first_name')->nullable();
             $table->string('last_name')->nullable();
-            $table->string('email_address')->unique();            
+            $table->string('email_address')->unique();
+            $table->string('phone', 50)->nullable();
             $table->string('password')->nullable();
             $table->timestamp('email_verified_at')->nullable();
             $table->string('remember_token', 100)->nullable();
-            $table->foreignId('tenant_id')->nullable()->constrained("tenants")->cascadeOnDelete();
-            $table->foreignId('user_group_id')->nullable()->constrained("user_groups")->cascadeOnDelete();
-            $table->enum('status', ['ACTIVE','INACTIVE','BLOCKED'])->default('ACTIVE');
+            $table->string('user_type', 50)->index();
+            $table->foreignId('tenant_id')->nullable()->constrained('tenants')->cascadeOnDelete();
+            $table->enum('status', ['ACTIVE', 'INACTIVE', 'BLOCKED'])->default('ACTIVE');
             $table->timestamps();
             $table->softDeletes();
         });
@@ -41,8 +42,6 @@ return new class extends Migration
             $table->integer('last_activity')->index();
         });
     }
-
-    
 
     /**
      * Reverse the migrations.

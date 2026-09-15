@@ -99,8 +99,8 @@ export default function ForgotPassword ({ status, step, error }) {
             {
                 (step === 1 || !step) &&
                 <div>            
-                    <h2 className="text-2xl mb-3 font-bold tracking-tight">Forgot Your Password?</h2>
-                    <p className="text-foreground/50 mb-5">Enter your email address below and we'll help you reset your password to get back into PropFlow.</p>
+                    <h2 className="mb-3 text-2xl font-bold tracking-tight text-foreground">Forgot Your Password?</h2>
+                    <p className="mb-5 text-muted-foreground">Enter your email address below and we'll help you reset your password to get back into PropFlow.</p>
 
                     <form onSubmit={handleSubmit(onSubmit)}>
                         <div className="my-5 flex flex-col space-y-5">   
@@ -127,16 +127,16 @@ export default function ForgotPassword ({ status, step, error }) {
                 <div className="space-y-4">
                     {
                         (status) &&
-                        <div className="px-3 py-2 rounded-md bg-green-700 text-white">{status}</div>
+                        <div className="rounded-md bg-success-muted px-3 py-2 text-success-muted-foreground">{status}</div>
                     }
 
                     {
                         (error) &&
-                        <div className="px-3 py-2 rounded-md bg-destructive text-white">{error}</div>
+                        <div className="rounded-md bg-destructive px-3 py-2 text-destructive-foreground">{error}</div>
                     }
                     
-                    <h2 className="text-2xl mb-3 font-bold tracking-tight">Enter OTP</h2>
-                    <p className="text-foreground/50 mb-5">Enter the OTP sent to your email address</p>
+                    <h2 className="mb-3 text-2xl font-bold tracking-tight text-foreground">Enter OTP</h2>
+                    <p className="mb-5 text-muted-foreground">Enter the OTP sent to your email address</p>
                     <form onSubmit={handleSubmit(onVerifySubmit)}>
                         <InputOTP 
                             size="lg"
@@ -171,9 +171,9 @@ export default function ForgotPassword ({ status, step, error }) {
             {
                 step === 3 &&
                 <div className="space-y-4">
-                    <div className="px-3 py-2 rounded-md bg-green-700 text-white">{status}</div>
-                    <h2 className="text-2xl mb-3 font-bold tracking-tight">Password Reset</h2>
-                    <p className="text-foreground/50 mb-5">You can now reset your password.</p>
+                    <div className="rounded-md bg-success-muted px-3 py-2 text-success-muted-foreground">{status}</div>
+                    <h2 className="mb-3 text-2xl font-bold tracking-tight text-foreground">Password Reset</h2>
+                    <p className="mb-5 text-muted-foreground">You can now reset your password.</p>
 
                     <form onSubmit={handleSubmit(handleSetPassword)}>
                         <div className="space-y-4">

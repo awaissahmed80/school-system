@@ -32,8 +32,12 @@ const  Login = ({ status, redirect }) => {
             },
             onError: (errors) => {       
                 setLoading(false)
-                console.log('errors', errors)         
-                toast.error(errors?.message || 'No message provided')
+                toast.error(
+                    errors?.message
+                        || errors?.email_address
+                        || errors?.password
+                        || 'Login failed. Please try again.',
+                )
             },
             // only: ['status', 'redirect', 'user', 'test']
         })
@@ -43,41 +47,63 @@ const  Login = ({ status, redirect }) => {
     return(
         <>
             <Head title="Login" />
-            <h2 className="text-2xl mb-1 font-bold tracking-tight">Log in to your account</h2>
-            <p className="text-foreground/50 mb-5">Good to see you again! Log in to get started.</p>
+            <h2 className="mb-1 text-2xl font-bold tracking-tight text-foreground">
+                Welcome back
+            </h2>
+            <p className="mb-5 text-muted-foreground">
+                Sign in to manage your school&apos;s people, academics, and
+                operations.
+            </p>
 
             {
                 status === 'authenticated' &&
-                <div className="bg-green-200 dark:bg-green-600 px-3 py-2 text-sm text-green-600 dark:text-green-100">
+                <div className="rounded-md bg-success-muted px-3 py-2 text-sm text-success-muted-foreground">
                     Login successful! You will be redirected shortly.
                 </div>
             }
             <form onSubmit={handleSubmit(onSubmit)}>
-                <div className="my-5 flex flex-col space-y-5">   
-
-                
-                    <Input 
-                        type="email" 
+                <div className="my-5 flex flex-col space-y-5">
+                    <Input
+                        type="email"
                         name="email_address"
-                        label="Email Address" 
+                        label="Email Address"
                         size="lg"
-                        startElement={<Icon name="mail-line"/>} 
-                        placeholder="e.g. john@email.com" 
+                        startElement={<Icon name="mail-line" />}
+                        placeholder="e.g. john@email.com"
                         {...register('email_address')}
                     />
-                    <Input.Password                    
-                        label="Password" 
+                    <Input.Password
+                        label="Password"
                         name="password"
                         size="lg"
-                        startElement={<Icon name="key-line"/>} 
-                        placeholder="" 
+                        startElement={<Icon name="key-line" />}
+                        placeholder=""
                         {...register('password')}
                     />
                     <div className="flex flex-row items-center justify-between">
-                        <Checkbox checked={watch('remember')} onCheckedChange={(e) => setValue('remember',e)}>Remember Me </Checkbox>
-                        <TextLink  className="text-base hover:underline hover:text-blue-400" href="/forgot-password">Forgot Password?</TextLink>
+                        <Checkbox
+                            checked={watch('remember')}
+                            onCheckedChange={(checked) =>
+                                setValue('remember', checked)
+                            }
+                        >
+                            Remember Me
+                        </Checkbox>
+                        <TextLink
+                            className="text-base hover:text-primary"
+                            href="/forgot-password"
+                        >
+                            Forgot Password?
+                        </TextLink>
                     </div>
-                    <Button size="lg" className="rounded-lg" loading={loading} type="submit">Login</Button>
+                    <Button
+                        size="lg"
+                        className="rounded-lg"
+                        loading={loading}
+                        type="submit"
+                    >
+                        Login
+                    </Button>
                 </div>
             </form>                         
         </>

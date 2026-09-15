@@ -35,9 +35,12 @@ class HandleHomeRequests extends Middleware
      */
     public function share(Request $request): array
     {
+        $baseDomain = config('app.base_domain');
+
         return [
             ...parent::share($request),
             'name' => config('app.name'),
+            'authUrl' => $request->getScheme().'://auth.'.$baseDomain,
             'auth' => [
                 'user' => $request->user(),
             ],

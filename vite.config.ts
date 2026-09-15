@@ -5,22 +5,33 @@ import tailwindcss from '@tailwindcss/vite';
 import react, { reactCompilerPreset } from '@vitejs/plugin-react';
 import laravel from 'laravel-vite-plugin';
 import { bunny } from 'laravel-vite-plugin/fonts';
+import { globSync } from 'node:fs';
 import { defineConfig, lazyPlugins } from 'vite-plus';
+
+const pageEntries = globSync(
+    'resources/js/{home,auth,portal}/pages/**/*.{jsx,tsx}',
+);
 
 export default defineConfig({
     plugins: lazyPlugins(() => [
         laravel({
             input: [
-                'resources/css/app.css',                                 
-                'resources/js/auth/auth.jsx', 
+                'resources/css/app.css',
+                'resources/css/home.css',
+                'resources/css/auth.css',
+                'resources/css/portal.css',
+                'resources/js/auth/auth.jsx',
                 'resources/js/home/home.jsx',
-                'resources/js/portal/portal.jsx'
+                'resources/js/portal/portal.jsx',
+                ...pageEntries,
             ],
-            // input: ['resources/css/app.css', 'resources/js/home/home.jsx'],
             refresh: true,
             fonts: [
                 bunny('Plus Jakarta Sans', {
-                    weights: [400, 500, 600, 800],
+                    weights: [400, 500, 600, 700, 800],
+                }),
+                bunny('Playfair Display', {
+                    weights: [500, 600, 700],
                 }),
             ],
         }),
@@ -34,18 +45,16 @@ export default defineConfig({
             formVariants: true,
         }),
     ]),
+    resolve: {
+        dedupe: ['react', 'react-dom'],
+    },
     optimizeDeps: {
         include: [
             'react',
             'react-dom',
             '@inertiajs/react',
-            // Add these — they're used in lazy-loaded pages:
             '@base-ui/react',
-            // '@base-ui/react/popover',      // if you use subpath imports
-            // '@base-ui/react/dialog',        // add all subpaths you use
-            // 'lucide-react',
-            // 'react-hook-form',
-            // Any other library used only in specific pages
+            'use-mask-input',
         ],
     },
     server: {

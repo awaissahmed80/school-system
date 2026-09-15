@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, forwardRef } from "react";
 import { Input as InputPrimitive } from "@base-ui/react/input"
 import { cn } from "@/lib/utils"
 import { cva } from "class-variance-authority";
@@ -8,8 +8,8 @@ import { Tooltip } from "./tooltip"
 
 const inputVariants = cva(
     cn(
-    "flex items-center space-x-2 rounded-md bg-transparent border-input dark:bg-input/30",
-    "h-9 border outline-0 px-3 py-1 pr-0 text-base shadow-xs transition-[color,box-shadow]",
+    "flex items-center space-x-2 rounded-md border border-input bg-transparent dark:bg-input/20",
+    "h-9 outline-0 px-3 py-1 pr-0 text-base shadow-xs transition-[color,box-shadow]",
     "focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]",
     "has-[input:focus-within]:border-ring  has-[input:focus-within]:ring-ring/50 has-[input:focus-within]:ring-[1px]",
     "has-[input[aria-invalid='true']]:ring-destructive/20 dark:has-[input[aria-invalid='true']]:ring-destructive/40 has-[input[aria-invalid='true']]:border-destructive"            
@@ -29,7 +29,7 @@ const inputVariants = cva(
     }
 )
 
-function Input({ className, info, size="default", variant="default", required = false, error, label, startElement=null, endElement=null, type, ...props }) {    
+const Input = forwardRef(function Input({ className, info, size="default", variant="default", required = false, error, label, startElement=null, endElement=null, type, ...props }, ref) {    
   return (
     <div>
         {
@@ -54,14 +54,10 @@ function Input({ className, info, size="default", variant="default", required = 
                 </div>
             }  
             <InputPrimitive
+                ref={ref}
                 type={type}
                 data-slot="input"
                 aria-invalid={!!error}
-                // className={cn(
-                //     "h-9 w-full min-w-0 rounded-sm border border-input bg-transparent px-2.5 py-1 text-base shadow-xs transition-[color,box-shadow] outline-none file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 md:text-sm dark:bg-input/30 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40",
-                //     className
-                // )}
-                                
                 className={cn(
                     "min-w-0 grow h-full w-full",
                     "block outline-0 text-base",
@@ -87,7 +83,7 @@ function Input({ className, info, size="default", variant="default", required = 
     
       </div>
   );
-}
+})
 
 function PasswordInput ({ className, label, error, startElement=null, ...props }) {
 
@@ -107,4 +103,5 @@ function PasswordInput ({ className, label, error, startElement=null, ...props }
 }
 
 Input.Password = PasswordInput
+Input.displayName = "Input"
 export { Input }

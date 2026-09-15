@@ -14,7 +14,7 @@ export const  NavLink = ({ href, children, end=false,  className, ...rest }) => 
     }
         
     return (
-        <Link href={href} className={cn(className, isActive ? 'bg-card text-primary' : "text-muted-foreground")} {...rest}>
+        <Link href={href} className={cn(className, isActive ? 'bg-card text-primary' : 'text-sidebar-foreground/80 hover:text-sidebar-foreground')} {...rest}>
             <span className="flex-1 flex flex-row items-center space-x-3">
                 {children}
             </span>

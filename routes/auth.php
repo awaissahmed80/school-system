@@ -1,21 +1,15 @@
 <?php
 
+use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use Illuminate\Support\Facades\Route;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
-Route::middleware(['web','auth'])->group(function() {        
-    // Route::domain('auth'.env('APP_BASE_DOMAIN'))->group(function () {    
-        // Log::debug('home', [env('APP_BASE_DOMAIN')]);
-        Route::inertia('/', 'login')->name('login');
-        Route::inertia('/forgot-password', 'forgot-password')->name('login');
+Route::get('/', [AuthenticatedSessionController::class, 'create'])->name('login');
+Route::post('/auth', [AuthenticatedSessionController::class, 'store'])->name('login.store');
+Route::post('/logout', [AuthenticatedSessionController::class, 'destroy'])->name('logout');
 
-        // Route::get('forgot-password', [PasswordResetLinkController::class, 'create'])
-        // ->name('password.request');
-
-    // });    
-});
+Route::inertia('/forgot-password', 'forgot-password')->name('password.request');
 
 Route::fallback(function () {
-    throw new \Symfony\Component\HttpKernel\Exception\NotFoundHttpException();
+    throw new NotFoundHttpException;
 });
-
-?>

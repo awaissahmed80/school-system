@@ -13,7 +13,10 @@ return new class extends Migration
     {
         Schema::create('tenant_users', function (Blueprint $table) {
             $table->id();
+            $table->unsignedBigInteger('landlord_user_id')->unique();
+            $table->string('user_type', 50)->index();
             $table->timestamps();
+            $table->softDeletes();
         });
     }
 

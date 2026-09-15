@@ -2,11 +2,15 @@
 
 namespace App\Providers;
 
+use App\Enums\UserType;
+use App\Models\User;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
+use Spatie\Multitenancy\Models\Tenant;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -24,6 +28,25 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->configureDefaults();
+        $this->configureAuthorization();
+    }
+
+    /**
+     * School owners are super-admins inside their own tenant context.
+     */
+    protected function configureAuthorization(): void
+    {
+        Gate::before(function ($user, string $ability): ?bool {
+            if (! $user instanceof User) {
+                return null;
+            }
+
+            if ($user->user_type === UserType::SchoolOwner && Tenant::checkCurrent()) {
+                return true;
+            }
+
+            return null;
+        });
     }
 
     /**

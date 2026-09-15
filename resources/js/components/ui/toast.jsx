@@ -3,7 +3,34 @@ import { cn } from "cn"
 import { Button } from "@/components/ui/button"
 import { XIcon, CircleCheckIcon, InfoIcon, TriangleAlertIcon, OctagonXIcon, Loader2Icon } from "lucide-react"
 
-const toast = ToastPrimitive.createToastManager()
+const toastManager = ToastPrimitive.createToastManager()
+
+function createTypedToast(type) {
+  return (message, options = {}) => {
+    if (typeof message === "object" && message !== null) {
+      return toastManager.add({
+        type,
+        title: message.title,
+        description: message.description,
+        ...options,
+      })
+    }
+
+    return toastManager.add({
+      type,
+      title: message,
+      ...options,
+    })
+  }
+}
+
+const toast = Object.assign(toastManager, {
+  success: createTypedToast("success"),
+  error: createTypedToast("error"),
+  info: createTypedToast("info"),
+  warning: createTypedToast("warning"),
+  loading: createTypedToast("loading"),
+})
 
 function ToastProvider({
   ...props
@@ -19,13 +46,21 @@ function ToastPortal({
 
 function ToastViewport({
   className,
+  position = "top-center",
   ...props
 }) {
   return (
     <ToastPrimitive.Viewport
       data-slot="toast-viewport"
+      data-position={position}
       className={cn(
-        "pointer-events-none fixed inset-x-4 bottom-4 z-50 mx-auto w-auto max-w-sm outline-none sm:right-4 sm:left-auto sm:mx-0 sm:w-full",
+        "pointer-events-none fixed z-50 mx-auto w-[calc(100vw-2rem)] max-w-sm outline-none",
+        position === "top-center" && "inset-x-0 top-4",
+        position === "top-right" && "top-4 right-4 left-auto mx-0",
+        position === "top-left" && "top-4 left-4 right-auto mx-0",
+        position === "bottom-center" && "inset-x-0 bottom-4",
+        position === "bottom-right" && "right-4 bottom-4 left-auto mx-0",
+        position === "bottom-left" && "bottom-4 left-4 right-auto mx-0",
         className
       )}
       {...props} />
@@ -34,27 +69,53 @@ function ToastViewport({
 
 function Toast({
   className,
+  position = "top-center",
+  richColors = false,
+  swipeDirection,
   ...props
 }) {
+  const isTop = position.startsWith("top")
+
   return (
     <ToastPrimitive.Root
       data-slot="toast"
+      data-rich-colors={richColors ? "true" : undefined}
+      swipeDirection={swipeDirection ?? (isTop ? ["up", "left", "right"] : ["down", "left", "right"])}
       className={cn(
-        "group/toast pointer-events-auto absolute right-0 bottom-0 z-[calc(1000-var(--toast-index))] w-full origin-bottom rounded-2xl border bg-popover text-popover-foreground shadow-lg will-change-transform outline-none select-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50",
-        "[--gap:0.75rem] [--height:var(--toast-frontmost-height,var(--toast-height))] [--offset-y:calc(var(--toast-offset-y)*-1+calc(var(--toast-index)*var(--gap)*-1)+var(--toast-swipe-movement-y))] [--peek:0.75rem] [--scale:calc(max(0,1-(var(--toast-index)*0.1)))] [--shrink:calc(1-var(--scale))]",
-        "h-(--height) [transform:translateX(var(--toast-swipe-movement-x))_translateY(calc(var(--toast-swipe-movement-y)-(var(--toast-index)*var(--peek))-(var(--shrink)*var(--height))))_scale(var(--scale))] [transition:transform_500ms_cubic-bezier(0.22,1,0.36,1),opacity_500ms,height_150ms]",
-        "after:absolute after:top-full after:left-0 after:h-[calc(var(--gap)+1px)] after:w-full after:content-['']",
-        "data-expanded:h-(--toast-height) data-expanded:[transform:translateX(var(--toast-swipe-movement-x))_translateY(var(--offset-y))]",
-        "data-limited:opacity-0 data-starting-style:[transform:translateY(150%)]",
-        "[&[data-ending-style]:not([data-limited]):not([data-swipe-direction])]:[transform:translateY(150%)]",
+        "group/toast pointer-events-auto absolute z-[calc(1000-var(--toast-index))] w-full rounded-xl border bg-popover text-popover-foreground shadow-lg will-change-transform outline-none select-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50",
+        "[--gap:0.75rem] [--height:var(--toast-frontmost-height,var(--toast-height))] [--peek:0.75rem] [--scale:calc(max(0,1-(var(--toast-index)*0.1)))] [--shrink:calc(1-var(--scale))]",
+        "h-(--height) [transition:transform_500ms_cubic-bezier(0.22,1,0.36,1),opacity_500ms,height_150ms]",
+        "data-limited:opacity-0 data-expanded:h-(--toast-height)",
+        isTop
+          ? [
+              "top-0 bottom-auto origin-top",
+              "[--offset-y:calc(var(--toast-offset-y)+calc(var(--toast-index)*var(--gap))+var(--toast-swipe-movement-y))]",
+              "[transform:translateX(var(--toast-swipe-movement-x))_translateY(calc(var(--toast-swipe-movement-y)+(var(--toast-index)*var(--peek))+(var(--shrink)*var(--height))))_scale(var(--scale))]",
+              "after:absolute after:bottom-full after:left-0 after:h-[calc(var(--gap)+1px)] after:w-full after:content-['']",
+              "data-expanded:[transform:translateX(var(--toast-swipe-movement-x))_translateY(var(--offset-y))]",
+              "data-starting-style:[transform:translateY(-150%)]",
+              "[&[data-ending-style]:not([data-limited]):not([data-swipe-direction])]:[transform:translateY(-150%)]",
+            ]
+          : [
+              "right-0 bottom-0 origin-bottom",
+              "[--offset-y:calc(var(--toast-offset-y)*-1+calc(var(--toast-index)*var(--gap)*-1)+var(--toast-swipe-movement-y))]",
+              "[transform:translateX(var(--toast-swipe-movement-x))_translateY(calc(var(--toast-swipe-movement-y)-(var(--toast-index)*var(--peek))-(var(--shrink)*var(--height))))_scale(var(--scale))]",
+              "after:absolute after:top-full after:left-0 after:h-[calc(var(--gap)+1px)] after:w-full after:content-['']",
+              "data-expanded:[transform:translateX(var(--toast-swipe-movement-x))_translateY(var(--offset-y))]",
+              "data-starting-style:[transform:translateY(150%)]",
+              "[&[data-ending-style]:not([data-limited]):not([data-swipe-direction])]:[transform:translateY(150%)]",
+            ],
         "data-ending-style:data-[swipe-direction=down]:[transform:translateY(calc(var(--toast-swipe-movement-y)+150%))]",
         "data-ending-style:data-[swipe-direction=left]:[transform:translateX(calc(var(--toast-swipe-movement-x)-150%))_translateY(var(--offset-y))]",
         "data-ending-style:data-[swipe-direction=right]:[transform:translateX(calc(var(--toast-swipe-movement-x)+150%))_translateY(var(--offset-y))]",
         "data-ending-style:data-[swipe-direction=up]:[transform:translateY(calc(var(--toast-swipe-movement-y)-150%))]",
-        "data-expanded:data-ending-style:data-[swipe-direction=down]:[transform:translateY(calc(var(--toast-swipe-movement-y)+150%))]",
-        "data-expanded:data-ending-style:data-[swipe-direction=left]:[transform:translateX(calc(var(--toast-swipe-movement-x)-150%))_translateY(var(--offset-y))]",
-        "data-expanded:data-ending-style:data-[swipe-direction=right]:[transform:translateX(calc(var(--toast-swipe-movement-x)+150%))_translateY(var(--offset-y))]",
-        "data-expanded:data-ending-style:data-[swipe-direction=up]:[transform:translateY(calc(var(--toast-swipe-movement-y)-150%))]",
+        richColors && [
+          "data-[type=success]:border-success/25 data-[type=success]:bg-success-muted data-[type=success]:text-success-muted-foreground",
+          "data-[type=error]:border-destructive/30 data-[type=error]:bg-destructive/15 data-[type=error]:text-destructive",
+          "data-[type=warning]:border-secondary/35 data-[type=warning]:bg-secondary/15 data-[type=warning]:text-secondary",
+          "data-[type=info]:border-primary/30 data-[type=info]:bg-primary/10 data-[type=info]:text-primary",
+          "data-[type=loading]:border-border data-[type=loading]:bg-muted data-[type=loading]:text-foreground",
+        ],
         className
       )}
       {...props} />
@@ -95,7 +156,11 @@ function ToastDescription({
   return (
     <ToastPrimitive.Description
       data-slot="toast-description"
-      className={cn("text-sm text-muted-foreground", className)}
+      className={cn(
+        "text-sm opacity-90 group-data-[rich-colors=true]/toast:text-current",
+        !className && "text-muted-foreground group-data-[rich-colors=true]/toast:opacity-90",
+        className
+      )}
       {...props} />
   );
 }
@@ -126,7 +191,7 @@ function ToastClose({
       aria-label="Close toast"
       render={render}
       className={cn(
-        "relative shrink-0 text-muted-foreground after:absolute after:-inset-2 after:content-[''] hover:text-foreground",
+        "relative shrink-0 opacity-70 after:absolute after:-inset-2 after:content-[''] hover:opacity-100 group-data-[rich-colors=true]/toast:text-current",
         className
       )}
       {...props}>
@@ -138,31 +203,40 @@ function ToastClose({
 }
 
 function ToastIcon({
-  type
+  type,
+  richColors = false,
 }) {
   let icon = null
 
   if (type === "success") {
     icon = (
-      <CircleCheckIcon aria-hidden="true" />
+      <CircleCheckIcon
+        className={richColors ? "text-success" : undefined}
+        aria-hidden="true" />
     )
   }
 
   if (type === "info") {
     icon = (
-      <InfoIcon aria-hidden="true" />
+      <InfoIcon
+        className={richColors ? "text-primary" : undefined}
+        aria-hidden="true" />
     )
   }
 
   if (type === "warning") {
     icon = (
-      <TriangleAlertIcon aria-hidden="true" />
+      <TriangleAlertIcon
+        className={richColors ? "text-secondary" : undefined}
+        aria-hidden="true" />
     )
   }
 
   if (type === "error") {
     icon = (
-      <OctagonXIcon className="text-destructive" aria-hidden="true" />
+      <OctagonXIcon
+        className="text-destructive"
+        aria-hidden="true" />
     )
   }
 
@@ -185,18 +259,25 @@ function ToastIcon({
   );
 }
 
-function ToastList() {
+function ToastList({
+  position = "top-center",
+  richColors = false,
+}) {
   const { toasts } = ToastPrimitive.useToastManager()
 
   return toasts.map((toastItem) => (
-    <Toast key={toastItem.id} toast={toastItem}>
+    <Toast
+      key={toastItem.id}
+      toast={toastItem}
+      position={position}
+      richColors={richColors}>
       <ToastContent>
-        <ToastIcon type={toastItem.type} />
-        <div className="flex min-w-0 flex-1 flex-col gap-1">
+        <ToastIcon type={toastItem.type} richColors={richColors} />
+        <div className="flex min-w-0 flex-1 flex-col gap-0.5">
           <ToastTitle />
           <ToastDescription />
         </div>
-        <ToastAction />
+        {toastItem.actionProps ? <ToastAction /> : null}
         <ToastClose />
       </ToastContent>
     </Toast>
@@ -205,15 +286,17 @@ function ToastList() {
 
 function Toaster({
   children,
-  toastManager = toast,
+  toastManager: manager = toast,
+  position = "top-center",
+  richColors = true,
   ...props
 }) {
   return (
-    <ToastProvider toastManager={toastManager} {...props}>
+    <ToastProvider toastManager={manager} {...props}>
       {children}
       <ToastPortal>
-        <ToastViewport>
-          <ToastList />
+        <ToastViewport position={position}>
+          <ToastList position={position} richColors={richColors} />
         </ToastViewport>
       </ToastPortal>
     </ToastProvider>

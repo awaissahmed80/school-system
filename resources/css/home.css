@@ -1,1 +1,102 @@
-@import 'app.css'
+@import 'app.css';
+
+@layer utilities {
+    .landing-hero-wash {
+        background:
+            radial-gradient(
+                ellipse 70% 55% at 100% 0%,
+                color-mix(in oklab, var(--secondary) 22%, transparent),
+                transparent 60%
+            ),
+            radial-gradient(
+                ellipse 55% 50% at 0% 20%,
+                color-mix(in oklab, var(--primary) 18%, transparent),
+                transparent 55%
+            ),
+            radial-gradient(
+                ellipse 45% 40% at 70% 100%,
+                color-mix(in oklab, var(--accent) 16%, transparent),
+                transparent 50%
+            ),
+            var(--background);
+    }
+
+    .landing-cta-band {
+        background:
+            radial-gradient(
+                ellipse 80% 120% at 10% 50%,
+                color-mix(in oklab, var(--primary-foreground) 12%, transparent),
+                transparent 55%
+            ),
+            var(--primary);
+    }
+
+    .landing-reveal {
+        animation: landing-reveal 0.85s cubic-bezier(0.22, 1, 0.36, 1) both;
+    }
+
+    .landing-reveal-delay-1 {
+        animation-delay: 0.1s;
+    }
+
+    .landing-reveal-delay-2 {
+        animation-delay: 0.2s;
+    }
+
+    .landing-reveal-delay-3 {
+        animation-delay: 0.3s;
+    }
+
+    .landing-reveal-delay-4 {
+        animation-delay: 0.4s;
+    }
+
+    .landing-float {
+        animation: landing-float 7s ease-in-out infinite;
+    }
+
+    .landing-blob {
+        animation: landing-blob 14s ease-in-out infinite alternate;
+    }
+}
+
+@keyframes landing-reveal {
+    from {
+        opacity: 0;
+        transform: translateY(1rem);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes landing-float {
+    0%,
+    100% {
+        transform: translateY(0);
+    }
+
+    50% {
+        transform: translateY(-0.65rem);
+    }
+}
+
+@keyframes landing-blob {
+    from {
+        transform: translate3d(0, 0, 0) scale(1);
+    }
+
+    to {
+        transform: translate3d(3%, -2%, 0) scale(1.06);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .landing-reveal,
+    .landing-float,
+    .landing-blob {
+        animation: none !important;
+    }
+}
